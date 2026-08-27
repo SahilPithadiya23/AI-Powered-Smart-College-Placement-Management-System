@@ -9,6 +9,8 @@ import { ROLES } from '../utils/constants.js';
 import { sendEmail } from '../services/emailService.js';
 import { logActivity } from '../services/auditService.js';
 
+const allowedEmailDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'];
+
 const authPayload = async (user) => {
   const accessToken = signAccessToken(user);
   const refreshToken = signRefreshToken(user);
@@ -22,9 +24,20 @@ const authPayload = async (user) => {
 };
 
 export const registerValidation = [
-  body('name').notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  body('name')
+    .trim()
+    .matches(/^[\p{L}][\p{L}\s.'-]*$/u)
+    .withMessage('Name must contain letters only (spaces, apostrophes, periods, and hyphens are allowed)'),
+  body('email')
+    .trim()
+    .normalizeEmail()
+    .custom((email) => allowedEmailDomains.some((domain) => email.toLowerCase().includes(domain)))
+    .withMessage('Use a Gmail, Yahoo, Outlook, or Hotmail email address'),
+  body('password')
+    .isLength({ min: 8 })
+    .matches(/[a-z]/).withMessage('Password must be at least 8 characters and include uppercase, lowercase, and a number')
+    .matches(/[A-Z]/).withMessage('Password must be at least 8 characters and include uppercase, lowercase, and a number')
+    .matches(/\d/).withMessage('Password must be at least 8 characters and include uppercase, lowercase, and a number'),
   body('role').isIn(Object.values(ROLES)).withMessage('Invalid role')
 ];
 

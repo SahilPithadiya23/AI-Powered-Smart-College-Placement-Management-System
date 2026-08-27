@@ -18,10 +18,16 @@ export const sendEmail = async ({ to, subject, html }) => {
     return;
   }
 
-  await transporter.sendMail({
-    from: env.email.from,
-    to,
-    subject,
-    html
-  });
+  try {
+    await transporter.sendMail({
+      from: env.email.from,
+      to,
+      subject,
+      html
+    });
+  } catch (error) {
+    // Email delivery is auxiliary; a bad SMTP credential must not prevent
+    // registration or other account actions from completing.
+    console.warn(`Email delivery failed [${subject}] -> ${to}: ${error.message}`);
+  }
 };
