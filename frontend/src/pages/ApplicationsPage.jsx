@@ -14,6 +14,14 @@ const statusDepth = {
   offer_released: 6
 };
 
+const getResumeUrl = (fileUrl) => {
+  if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
+
+  const apiUrl = api.defaults.baseURL || window.location.origin;
+  const backendUrl = apiUrl.replace(/\/api\/?$/, '');
+  return `${backendUrl}/${fileUrl.replace(/^\/+/, '')}`;
+};
+
 const tabs = [
   ['applied', 'Applied'],
   ['under_review', 'Under Review'],
@@ -109,7 +117,7 @@ export const ApplicationsPage = () => {
               </span>
               <span className="text-sm text-slate-600">Skills: {application.studentProfile?.skills?.join(', ') || 'Not added'}</span>
               {application.resume?.fileUrl && (
-                <a href={application.resume.fileUrl} target="_blank" rel="noreferrer" className="focus-ring inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
+                <a href={getResumeUrl(application.resume.fileUrl)} target="_blank" rel="noreferrer" className="focus-ring inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
                   <Download size={15} /> Resume
                 </a>
               )}

@@ -8,6 +8,8 @@ import { ROLES } from '../utils/constants.js';
 import { calculatePlacementProbability } from '../services/predictionService.js';
 import { parseResume } from '../services/atsService.js';
 
+const uploadUrl = (file) => `/uploads/${file.filename}`;
+
 export const getProfile = asyncHandler(async (req, res) => {
   const Model = req.user.role === ROLES.RECRUITER ? Recruiter : Student;
   const profile = await Model.findOne({ user: req.user._id }).populate('company');
@@ -16,7 +18,7 @@ export const getProfile = asyncHandler(async (req, res) => {
 
 export const updateStudentProfile = asyncHandler(async (req, res) => {
   const update = { ...req.body };
-  if (req.file) update.profilePhoto = req.file.path;
+  if (req.file) update.profilePhoto = uploadUrl(req.file);
   update.placementProbability = calculatePlacementProbability(update);
   const profile = await Student.findOneAndUpdate({ user: req.user._id }, update, {
     new: true,
@@ -28,7 +30,7 @@ export const updateStudentProfile = asyncHandler(async (req, res) => {
 
 export const upsertCompany = asyncHandler(async (req, res) => {
   const payload = { ...req.body, recruiter: req.user._id };
-  if (req.file) payload.logo = req.file.path;
+  if (req.file) payload.logo = uploadUrl(req.file);
   const company = await Company.findOneAndUpdate({ recruiter: req.user._id }, payload, {
     new: true,
     upsert: true,
@@ -48,7 +50,7 @@ export const uploadResume = asyncHandler(async (req, res) => {
   const resume = await Resume.create({
     student: req.user._id,
     label: req.body.label || req.file.originalname,
-    fileUrl: req.file.path,
+    fileUrl: uploadUrl(req.file),
     isDefault: req.body.isDefault === 'true',
     parsed: parseResume(req.file.originalname)
   });

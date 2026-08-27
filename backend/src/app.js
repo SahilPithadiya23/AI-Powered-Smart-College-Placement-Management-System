@@ -6,6 +6,7 @@ import { corsOptions, securityMiddleware } from "./middlewares/security.js";
 import { sanitizeInput } from "./middlewares/sanitize.js";
 import { apiRoutes } from "./routes/index.js";
 import { errorHandler, notFound } from "./middlewares/error.js";
+import { uploadDir } from "./middlewares/upload.js";
 
 export const app = express();
 
@@ -18,7 +19,7 @@ app.use(cookieParser());
 app.use(compression());
 app.use(morgan("dev"));
 
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(uploadDir));
 
 // Root API route
 app.get("/", (_req, res) => {
