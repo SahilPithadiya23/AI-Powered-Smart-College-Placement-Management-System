@@ -58,7 +58,6 @@ export const RegisterPage = () => {
         <select className="focus-ring mt-1 w-full rounded-md border border-slate-300 px-3 py-2" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
           <option value="student">Student</option>
           <option value="recruiter">Recruiter</option>
-          <option value="placement_officer">Placement Officer</option>
           <option value="admin">Admin</option>
         </select>
         {(formError || error) && <p className="mt-3 text-sm text-red-600">{formError || error}</p>}
