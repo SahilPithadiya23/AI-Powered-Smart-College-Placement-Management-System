@@ -9,7 +9,8 @@ import { checkEligibility } from '../services/eligibilityService.js';
 import { ROLES } from '../utils/constants.js';
 
 export const listJobs = asyncHandler(async (req, res) => {
-  const jobs = await searchJobs(req.query);
+  const scope = req.user?.role === ROLES.RECRUITER ? { recruiter: req.user._id } : {};
+  const jobs = await searchJobs(req.query, scope);
   if (req.user?.role !== ROLES.STUDENT) {
     res.json({ success: true, jobs });
     return;
@@ -34,12 +35,15 @@ export const listJobs = asyncHandler(async (req, res) => {
   });
 });
 
-export const hiringFeed = asyncHandler(async (_req, res) => {
+export const hiringFeed = asyncHandler(async (req, res) => {
+  const scope = req.user?.role === ROLES.RECRUITER ? { recruiter: req.user._id } : {};
+  const companyScope = req.user?.role === ROLES.RECRUITER ? { recruiter: req.user._id } : { isApproved: true };
+
   const [recentJobs, closingSoonJobs, activeCompanies, trendingJobs] = await Promise.all([
-    Job.find({ status: 'active' }).populate('company').sort({ createdAt: -1 }).limit(8),
-    Job.find({ status: 'active' }).populate('company').sort({ closingDate: 1 }).limit(8),
-    Company.find({ isApproved: true }).sort({ createdAt: -1 }).limit(8),
-    Job.find({ status: 'active' }).populate('company').sort({ applicationsCount: -1 }).limit(8)
+    Job.find({ ...scope, status: 'active' }).populate('company').sort({ createdAt: -1 }).limit(8),
+    Job.find({ ...scope, status: 'active' }).populate('company').sort({ closingDate: 1 }).limit(8),
+    Company.find(companyScope).sort({ createdAt: -1 }).limit(8),
+    Job.find({ ...scope, status: 'active' }).populate('company').sort({ applicationsCount: -1 }).limit(8)
   ]);
   res.json({ success: true, recentJobs, closingSoonJobs, activeCompanies, trendingJobs });
 });

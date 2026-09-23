@@ -4,8 +4,8 @@ import { User } from '../models/User.js';
 import { createNotification } from './notificationService.js';
 import { logActivity } from './auditService.js';
 
-export const searchJobs = (query) => {
-  const filter = {};
+export const searchJobs = (query, scope = {}) => {
+  const filter = { ...scope };
   if (query.status) filter.status = query.status;
   if (query.company) filter.company = query.company;
   if (query.location) filter.location = new RegExp(query.location, 'i');

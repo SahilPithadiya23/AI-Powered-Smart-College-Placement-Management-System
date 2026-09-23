@@ -27,7 +27,7 @@ export const applyForJob = asyncHandler(async (req, res) => {
   const resume = resumeId
     ? await Resume.findOne({ _id: resumeId, student: req.user._id })
     : await Resume.findOne({ student: req.user._id, isDefault: true });
-  const ats = analyzeResumeForJob({ resume, student: eligibility.student, job: eligibility.job });
+  const ats = await analyzeResumeForJob({ resume, student: eligibility.student, job: eligibility.job });
 
   const application = await Application.create({
     student: req.user._id,

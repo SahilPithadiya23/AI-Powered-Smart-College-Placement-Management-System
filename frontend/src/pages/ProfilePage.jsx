@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BriefcaseBusiness, Building2, ClipboardList, Pencil, ShieldCheck, Upload, UsersRound } from 'lucide-react';
+import { BriefcaseBusiness, Building2, ClipboardList, Pencil, SearchCheck, ShieldCheck, Upload, UsersRound } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { api } from '../services/api.js';
 import { StatCard } from '../components/StatCard.jsx';
@@ -83,11 +83,18 @@ const profileCompletion = (profile = {}) => {
 
 const StudentProfile = ({ user, profile, setProfile }) => {
   const [resumes, setResumes] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [verificationResumeId, setVerificationResumeId] = useState('');
+  const [verificationForm, setVerificationForm] = useState({ role: '', company: '', jobId: '' });
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [verificationStatus, setVerificationStatus] = useState({ type: '', text: '' });
+  const [showResumeImprovements, setShowResumeImprovements] = useState(false);
   const hasSavedProfile = hasStudentProfileData(profile);
 
   useEffect(() => {
     api.get('/profiles/resumes').then(({ data }) => setResumes(data.resumes));
+    api.get('/jobs').then(({ data }) => setJobs(data.jobs));
   }, []);
 
   const saveStudent = async (event) => {
@@ -105,6 +112,23 @@ const StudentProfile = ({ user, profile, setProfile }) => {
     formData.append('isDefault', resumes.length === 0 ? 'true' : 'false');
     const { data } = await api.post('/profiles/resumes', formData);
     setResumes([data.resume, ...resumes]);
+  };
+
+  const verifyResume = async (event) => {
+    event.preventDefault();
+    if (!verificationResumeId) return;
+
+    setVerificationStatus({ type: '', text: '' });
+    setVerificationResult(null);
+    setShowResumeImprovements(false);
+
+    try {
+      const { data } = await api.post(`/profiles/resumes/${verificationResumeId}/verify`, { jobId: verificationForm.jobId });
+      setVerificationResult(data.verification);
+      setVerificationStatus({ type: 'success', text: 'Resume verification completed.' });
+    } catch (error) {
+      setVerificationStatus({ type: 'error', text: getApiError(error) });
+    }
   };
 
   const profileRows = [
@@ -175,11 +199,108 @@ const StudentProfile = ({ user, profile, setProfile }) => {
         <div className="mt-4 space-y-3">
           {resumes.map((resume) => (
             <div key={resume._id} className="rounded-md border border-slate-200 p-3">
-              <p className="font-medium text-ink">{resume.label}</p>
-              <p className="text-sm text-slate-500">{resume.isDefault ? 'Default resume' : 'Versioned resume'}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-ink">{resume.label}</p>
+                  <p className="text-sm text-slate-500">{resume.isDefault ? 'Default resume' : 'Versioned resume'}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerificationResumeId(resume._id);
+                    setVerificationForm({ role: '', company: '', jobId: '' });
+                    setVerificationResult(null);
+                    setVerificationStatus({ type: '', text: '' });
+                    setShowResumeImprovements(false);
+                  }}
+                  className="focus-ring inline-flex items-center gap-1 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white"
+                >
+                  <SearchCheck size={15} /> Verify
+                </button>
+              </div>
             </div>
           ))}
         </div>
+        {verificationResumeId && (
+          <form onSubmit={verifyResume} className="mt-4 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+            <label className="block text-sm font-medium text-slate-700">
+              Role
+              <select
+                required
+                className="focus-ring mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                value={verificationForm.role}
+                onChange={(event) => {
+                  const role = event.target.value;
+                  setVerificationForm({ role, company: '', jobId: '' });
+                }}
+              >
+                <option value="">Select role</option>
+                {[...new Set(jobs.map((job) => job.title).filter(Boolean))].map((role) => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Company name
+              <select
+                required
+                className="focus-ring mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                value={verificationForm.jobId}
+                onChange={(event) => {
+                  const selectedJob = jobs.find((job) => job._id === event.target.value);
+                  setVerificationForm({
+                    ...verificationForm,
+                    company: selectedJob?.company?.name || '',
+                    jobId: event.target.value
+                  });
+                }}
+                disabled={!verificationForm.role}
+              >
+                <option value="">Select company</option>
+                {jobs
+                  .filter((job) => job.title === verificationForm.role)
+                  .map((job) => (
+                    <option key={job._id} value={job._id}>{job.company?.name || 'Company'}</option>
+                  ))}
+              </select>
+            </label>
+            <button className="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white">
+              <SearchCheck size={16} /> Run verification
+            </button>
+            {verificationStatus.text && (
+              <p className={`text-sm ${verificationStatus.type === 'error' ? 'text-red-600' : 'text-brand'}`}>{verificationStatus.text}</p>
+            )}
+            {verificationResult && (
+              <div className="rounded-md bg-white p-3 text-sm text-slate-700">
+                <p className="font-semibold text-ink">Match score: {verificationResult.atsScore}%</p>
+                <p className="mt-1 capitalize">{verificationResult.matchVerdict?.replace('_', ' ')}</p>
+                <p className="mt-2">{verificationResult.matchSummary}</p>
+                <p className="mt-2"><span className="font-medium">Missing:</span> {verificationResult.missingSkills?.join(', ') || 'No gaps detected'}</p>
+                <button
+                  type="button"
+                  onClick={() => setShowResumeImprovements((current) => !current)}
+                  className="focus-ring mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-brand px-3 py-2 text-sm font-medium text-brand"
+                >
+                  <ClipboardList size={16} /> {showResumeImprovements ? 'Hide resume improvements' : 'Show resume improvements'}
+                </button>
+                {showResumeImprovements && (
+                  <div className="mt-3 rounded-md bg-emerald-50 p-3">
+                    <p className="font-medium text-ink">Recommended improvements</p>
+                    {verificationResult.matchSuggestions?.length > 0 ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5">
+                        {verificationResult.matchSuggestions.map((suggestion) => (
+                          <li key={suggestion}>{suggestion}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2">No specific resume improvements were suggested for this role.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </form>
+        )}
       </aside>
     </div>
   );

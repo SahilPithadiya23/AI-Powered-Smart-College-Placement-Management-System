@@ -5,6 +5,7 @@ import {
   listResumes,
   setDefaultResume,
   updateStudentProfile,
+  verifyResume,
   uploadResume,
   upsertCompany
 } from '../controllers/profileController.js';
@@ -20,5 +21,6 @@ profileRoutes.put('/student', authorize(ROLES.STUDENT), upload.single('profilePh
 profileRoutes.put('/company', authorize(ROLES.RECRUITER), upload.single('logo'), upsertCompany);
 profileRoutes.get('/resumes', authorize(ROLES.STUDENT), listResumes);
 profileRoutes.post('/resumes', authorize(ROLES.STUDENT), upload.single('resume'), uploadResume);
+profileRoutes.post('/resumes/:id/verify', authorize(ROLES.STUDENT), verifyResume);
 profileRoutes.patch('/resumes/:id/default', authorize(ROLES.STUDENT), setDefaultResume);
 profileRoutes.delete('/resumes/:id', authorize(ROLES.STUDENT), deleteResume);
