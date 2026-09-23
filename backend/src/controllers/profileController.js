@@ -6,7 +6,7 @@ import { AppError } from '../utils/AppError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ROLES } from '../utils/constants.js';
 import { calculatePlacementProbability } from '../services/predictionService.js';
-import { parseResume } from '../services/atsService.js';
+import { parseResumeFile } from '../services/resumeParserService.js';
 
 export const getProfile = asyncHandler(async (req, res) => {
   const Model = req.user.role === ROLES.RECRUITER ? Recruiter : Student;
@@ -41,16 +41,21 @@ export const upsertCompany = asyncHandler(async (req, res) => {
 export const uploadResume = asyncHandler(async (req, res) => {
   if (!req.file) throw new AppError('Resume file is required', 400);
 
-  if (req.body.isDefault === 'true') {
+  const count = await Resume.countDocuments({ student: req.user._id });
+  const isDefault = req.body.isDefault === 'true' || count === 0;
+
+  if (isDefault) {
     await Resume.updateMany({ student: req.user._id }, { isDefault: false });
   }
+
+  const parsedData = await parseResumeFile(req.file.path, req.file.originalname);
 
   const resume = await Resume.create({
     student: req.user._id,
     label: req.body.label || req.file.originalname,
     fileUrl: req.file.path,
-    isDefault: req.body.isDefault === 'true',
-    parsed: parseResume(req.file.originalname)
+    isDefault,
+    parsed: parsedData
   });
 
   res.status(201).json({ success: true, resume });

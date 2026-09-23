@@ -21,5 +21,25 @@ export const env = {
     user: process.env.EMAIL_USER,
     password: process.env.EMAIL_PASSWORD,
     from: process.env.EMAIL_FROM || 'Placement Cell <noreply@placement.local>'
-  }
+  },
+  groqPrimaryApiKey:
+    process.env.GROQ_PLACEMENT_API_KEY_PRIMARY ||
+    process.env.GROQ_API_KEY_PREPARATION ||
+    process.env.GROQ_API_KEY,
+  groqBackupApiKey:
+    process.env.GROQ_PLACEMENT_API_KEY_BACKUP ||
+    process.env.GROQ_API_KEY_CHATBOT ||
+    process.env.GROQ_API_KEY,
+  groqPrimaryModel:
+    process.env.GROQ_PLACEMENT_MODEL_PRIMARY ||
+    process.env.GROQ_MODEL ||
+    'openai/gpt-oss-120b',
+  groqBackupModel:
+    process.env.GROQ_PLACEMENT_MODEL_BACKUP ||
+    process.env.GROQ_MODEL ||
+    'openai/gpt-oss-120b',
+  groqApiKey: process.env.GROQ_API_KEY || process.env.GROQ_PLACEMENT_API_KEY_PRIMARY,
+  groqApiKeyPreparation: process.env.GROQ_API_KEY_PREPARATION || process.env.GROQ_PLACEMENT_API_KEY_PRIMARY,
+  groqApiKeyChatbot: process.env.GROQ_API_KEY_CHATBOT || process.env.GROQ_PLACEMENT_API_KEY_BACKUP,
+  groqModel: process.env.GROQ_PLACEMENT_MODEL_PRIMARY || process.env.GROQ_MODEL || 'openai/gpt-oss-120b'
 };
