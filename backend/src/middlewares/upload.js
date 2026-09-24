@@ -1,9 +1,11 @@
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import multer from 'multer';
 import { AppError } from '../utils/AppError.js';
 
-const uploadDir = 'uploads';
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+export const uploadDir = path.resolve(currentDir, '../../uploads');
 fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({

@@ -2,11 +2,15 @@ import { Student } from '../models/Student.js';
 import { Recruiter } from '../models/Recruiter.js';
 import { Company } from '../models/Company.js';
 import { Resume } from '../models/Resume.js';
+import { Job } from '../models/Job.js';
 import { AppError } from '../utils/AppError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ROLES } from '../utils/constants.js';
 import { calculatePlacementProbability } from '../services/predictionService.js';
 import { parseResumeFile } from '../services/resumeParserService.js';
+import { analyzeResumeForJob, parseResume } from '../services/atsService.js';
+
+const uploadUrl = (file) => `/uploads/${file.filename}`;
 
 export const getProfile = asyncHandler(async (req, res) => {
   const Model = req.user.role === ROLES.RECRUITER ? Recruiter : Student;
@@ -16,7 +20,7 @@ export const getProfile = asyncHandler(async (req, res) => {
 
 export const updateStudentProfile = asyncHandler(async (req, res) => {
   const update = { ...req.body };
-  if (req.file) update.profilePhoto = req.file.path;
+  if (req.file) update.profilePhoto = uploadUrl(req.file);
   update.placementProbability = calculatePlacementProbability(update);
   const profile = await Student.findOneAndUpdate({ user: req.user._id }, update, {
     new: true,
@@ -28,7 +32,7 @@ export const updateStudentProfile = asyncHandler(async (req, res) => {
 
 export const upsertCompany = asyncHandler(async (req, res) => {
   const payload = { ...req.body, recruiter: req.user._id };
-  if (req.file) payload.logo = req.file.path;
+  if (req.file) payload.logo = uploadUrl(req.file);
   const company = await Company.findOneAndUpdate({ recruiter: req.user._id }, payload, {
     new: true,
     upsert: true,
@@ -48,12 +52,18 @@ export const uploadResume = asyncHandler(async (req, res) => {
     await Resume.updateMany({ student: req.user._id }, { isDefault: false });
   }
 
-  const parsedData = await parseResumeFile(req.file.path, req.file.originalname);
+  let parsedData;
+  try {
+    parsedData = await parseResumeFile(req.file.path, req.file.originalname);
+  } catch (error) {
+    console.warn('[ResumeUpload] Detailed parse fallback to basic ATS parse:', error.message);
+    parsedData = parseResume(req.file.originalname);
+  }
 
   const resume = await Resume.create({
     student: req.user._id,
     label: req.body.label || req.file.originalname,
-    fileUrl: req.file.path,
+    fileUrl: uploadUrl(req.file),
     isDefault,
     parsed: parsedData
   });
@@ -75,6 +85,23 @@ export const setDefaultResume = asyncHandler(async (req, res) => {
   );
   if (!resume) throw new AppError('Resume not found', 404);
   res.json({ success: true, resume });
+});
+
+export const verifyResume = asyncHandler(async (req, res) => {
+  const resume = await Resume.findOne({ _id: req.params.id, student: req.user._id });
+  if (!resume) throw new AppError('Resume not found', 404);
+
+  const job = req.body.jobId ? await Job.findById(req.body.jobId).populate('company') : null;
+  if (!job) throw new AppError('Select a role and company for verification.', 400);
+
+  const student = await Student.findOne({ user: req.user._id });
+  const verification = await analyzeResumeForJob({
+    resume,
+    student,
+    job
+  });
+
+  res.json({ success: true, verification, job });
 });
 
 export const deleteResume = asyncHandler(async (req, res) => {

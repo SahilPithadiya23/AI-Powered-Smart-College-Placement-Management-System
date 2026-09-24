@@ -22,6 +22,17 @@ export const env = {
     password: process.env.EMAIL_PASSWORD,
     from: process.env.EMAIL_FROM || 'Placement Cell <noreply@placement.local>'
   },
+  groq: {
+    apiKey:
+      process.env.GROQ_API_KEY ||
+      process.env.GROQ_PLACEMENT_API_KEY_PRIMARY ||
+      process.env.GROQ_API_KEY_PREPARATION ||
+      process.env.GROQ_PLACEMENT_API_KEY_BACKUP,
+    model:
+      process.env.GROQ_MODEL ||
+      process.env.GROQ_PLACEMENT_MODEL_PRIMARY ||
+      'openai/gpt-oss-120b'
+  },
   groqPrimaryApiKey:
     process.env.GROQ_PLACEMENT_API_KEY_PRIMARY ||
     process.env.GROQ_API_KEY_PREPARATION ||

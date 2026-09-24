@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Bell, BriefcaseBusiness, ChartColumn, FileText, LayoutDashboard, LogOut, Settings, UserRound } from 'lucide-react';
 import { logout } from '../store/authSlice.js';
+import { fetchNotifications, markNotificationRead } from '../store/appSlice.js';
 import { useSocket } from '../hooks/useSocket.js';
 
 const links = [
@@ -19,6 +21,17 @@ export const AppLayout = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const notifications = useSelector((state) => state.app.notifications);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchNotifications());
+  }, [dispatch]);
+
+  const unreadNotifications = notifications.filter((notification) => !notification.readAt);
+
+  const handleNotificationClick = (notification) => {
+    if (!notification.readAt) dispatch(markNotificationRead(notification._id));
+  };
 
   const visibleLinks = links.filter((link) => link.to !== '/admin' || ['admin', 'placement_officer'].includes(user?.role));
 
@@ -49,11 +62,42 @@ export const AppLayout = () => {
             <p className="text-sm text-slate-500">{user?.role?.replace('_', ' ')}</p>
             <h1 className="text-lg font-semibold text-ink">{user?.name}</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="focus-ring relative rounded-md border border-slate-200 p-2 text-slate-700" title="Notifications">
+          <div className="relative flex items-center gap-3">
+            <button
+              className="focus-ring relative rounded-md border border-slate-200 p-2 text-slate-700"
+              onClick={() => setNotificationsOpen((isOpen) => !isOpen)}
+              aria-expanded={notificationsOpen}
+              aria-controls="notification-menu"
+              title="Notifications"
+            >
               <Bell size={18} />
-              {notifications.length > 0 && <span className="absolute -right-1 -top-1 h-4 min-w-4 rounded-full bg-accent text-[10px] text-white">{notifications.length}</span>}
+              {unreadNotifications.length > 0 && <span className="absolute -right-1 -top-1 h-4 min-w-4 rounded-full bg-accent text-[10px] text-white">{unreadNotifications.length}</span>}
             </button>
+            {notificationsOpen && (
+              <div id="notification-menu" className="absolute right-12 top-12 z-20 w-80 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg sm:right-0">
+                <div className="border-b border-slate-100 px-4 py-3">
+                  <h2 className="font-semibold text-ink">Notifications</h2>
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-sm text-slate-500">You have no notifications.</p>
+                  ) : (
+                    notifications.map((notification) => (
+                      <button
+                        key={notification._id}
+                        type="button"
+                        onClick={() => handleNotificationClick(notification)}
+                        className={`w-full border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50 ${!notification.readAt ? 'bg-blue-50/60' : ''}`}
+                      >
+                        <p className="text-sm font-medium text-ink">{notification.title}</p>
+                        <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
+                        <p className="mt-1 text-xs text-slate-400">{notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ''}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
             <button
               className="focus-ring rounded-md border border-slate-200 p-2 text-slate-700"
               onClick={() => {

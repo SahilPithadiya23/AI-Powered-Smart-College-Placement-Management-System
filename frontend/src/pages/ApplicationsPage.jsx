@@ -14,6 +14,14 @@ const statusDepth = {
   offer_released: 6
 };
 
+const getResumeUrl = (fileUrl) => {
+  if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
+
+  const apiUrl = api.defaults.baseURL || window.location.origin;
+  const backendUrl = apiUrl.replace(/\/api\/?$/, '');
+  return `${backendUrl}/${fileUrl.replace(/^\/+/, '')}`;
+};
+
 const tabs = [
   ['applied', 'Applied'],
   ['under_review', 'Under Review'],
@@ -80,15 +88,28 @@ export const ApplicationsPage = () => {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="font-semibold text-ink">{application.job?.title}</h2>
-              <p className="text-sm text-slate-500">{application.job?.company?.name} - ATS {application.atsScore || 0}%</p>
+              <p className="text-sm text-slate-500">
+                {application.job?.company?.name} - Resume match {application.atsScore || 0}%
+                {application.verificationProvider === 'groq' ? ' by Groq AI' : ''}
+              </p>
               {user?.role !== 'student' && (
                 <p className="mt-1 text-sm text-slate-600">
                   {application.student?.name} - {application.studentProfile?.usn || 'USN not set'} - CGPA {application.studentProfile?.cgpa || 0}
                 </p>
               )}
             </div>
-            <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{application.status}</span>
+            <div className="flex flex-wrap justify-end gap-2">
+              {application.matchVerdict && (
+                <span className="rounded bg-indigo-50 px-2 py-1 text-xs font-medium capitalize text-indigo-700">
+                  {application.matchVerdict.replace('_', ' ')}
+                </span>
+              )}
+              <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{application.status}</span>
+            </div>
           </div>
+          {application.matchSummary && (
+            <p className="mt-3 rounded-md bg-slate-50 p-3 text-sm text-slate-700">{application.matchSummary}</p>
+          )}
           <div className="mt-5">
             <Timeline active={statusDepth[application.status] || 1} />
           </div>
@@ -102,6 +123,16 @@ export const ApplicationsPage = () => {
               <p className="mt-1 text-sm text-slate-600">{application.missingSkills?.join(', ') || 'No gaps detected'}</p>
             </div>
           </div>
+          {application.matchSuggestions?.length > 0 && (
+            <div className="mt-3 rounded-md bg-sky-50 p-3">
+              <p className="text-sm font-medium text-sky-800">Resume suggestions</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                {application.matchSuggestions.map((suggestion) => (
+                  <li key={suggestion}>{suggestion}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {user?.role !== 'student' && (
             <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
               <span className={`rounded px-2 py-1 text-xs font-medium ${application.eligibilityStatus === 'Eligible' ? 'bg-emerald-50 text-brand' : 'bg-red-50 text-red-700'}`}>
@@ -109,7 +140,7 @@ export const ApplicationsPage = () => {
               </span>
               <span className="text-sm text-slate-600">Skills: {application.studentProfile?.skills?.join(', ') || 'Not added'}</span>
               {application.resume?.fileUrl && (
-                <a href={application.resume.fileUrl} target="_blank" rel="noreferrer" className="focus-ring inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
+                <a href={getResumeUrl(application.resume.fileUrl)} target="_blank" rel="noreferrer" className="focus-ring inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
                   <Download size={15} /> Resume
                 </a>
               )}

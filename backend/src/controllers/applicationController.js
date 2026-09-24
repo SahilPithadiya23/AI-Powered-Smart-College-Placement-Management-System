@@ -20,10 +20,14 @@ export const applyForJob = asyncHandler(async (req, res) => {
   const eligibility = await checkEligibility({ studentUserId: req.user._id, jobId: req.params.jobId });
   if (!eligibility.eligible) throw new AppError(`You are not eligible because ${eligibility.reasons.join(', ')}.`, 400);
 
-  const resume = req.body.resumeId
-    ? await Resume.findOne({ _id: req.body.resumeId, student: req.user._id })
+  // Applying from the jobs page does not require a request body. Express may
+  // leave req.body undefined when the request has no content, so guard it
+  // before reading an optional resume id.
+  const resumeId = req.body?.resumeId;
+  const resume = resumeId
+    ? await Resume.findOne({ _id: resumeId, student: req.user._id })
     : await Resume.findOne({ student: req.user._id, isDefault: true });
-  const ats = analyzeResumeForJob({ resume, student: eligibility.student, job: eligibility.job });
+  const ats = await analyzeResumeForJob({ resume, student: eligibility.student, job: eligibility.job });
 
   const application = await Application.create({
     student: req.user._id,

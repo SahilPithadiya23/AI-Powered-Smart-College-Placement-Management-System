@@ -17,7 +17,15 @@ const applicationSchema = new mongoose.Schema(
     ],
     atsScore: Number,
     matchingSkills: [String],
-    missingSkills: [String]
+    missingSkills: [String],
+    matchVerdict: {
+      type: String,
+      enum: ['strong_match', 'good_match', 'partial_match', 'low_match'],
+      default: 'partial_match'
+    },
+    matchSummary: String,
+    matchSuggestions: [String],
+    verificationProvider: { type: String, default: 'local' }
   },
   { timestamps: true }
 );
